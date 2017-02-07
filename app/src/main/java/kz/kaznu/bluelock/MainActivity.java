@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
     // Init of bluetooth shit
     private void initBluetoothStaff() {
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
         mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
             @Override
             public void onLeScan(final BluetoothDevice device, final int blerssi,
@@ -83,7 +84,6 @@ public class MainActivity extends AppCompatActivity {
                     devices.add(bluePayDevice);
 
                 }
-
             }
         };
     }
@@ -99,13 +99,19 @@ public class MainActivity extends AppCompatActivity {
                 new CompoundButton.OnCheckedChangeListener() {
                     @Override
                     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                        if (isChecked || !mBluetoothAdapter.isDiscovering()) {
-                            Log.d("SWITCH_ON", "Check true");
 
-                            startScanLeDevice();
+                        if (isChecked) {
+
+                            if (!mScanning && !mBluetoothAdapter.isDiscovering()) {
+                                Log.d("SWITCH_ON", "Check true");
+                                Toast.makeText(MainActivity.this, "Start scanning", Toast.LENGTH_SHORT).show();
+                                startScanLeDevice();
+                            }
 
                         } else {
                             Log.d("MAIN", "Check false");
+                            Toast.makeText(MainActivity.this, "Start connection", Toast.LENGTH_SHORT).show();
+                            doConnectToClosestDevice();
                         }
                     }
                 });
@@ -151,18 +157,29 @@ public class MainActivity extends AppCompatActivity {
         final BluetoothDevice device =
                 mBluetoothAdapter.getRemoteDevice(best_device.getAddress());
 
-        // We want to directly connect to the device, so we are setting the autoConnect
-        // parameter to false.
-        Log.d("GATT_CONNECTION", "GO!!!!!!!!");
         mBluetoothGatt = device.connectGatt(getApplication(), true, mGattCallback);
-        mBluetoothGatt.discoverServices();
+    }
+
+    private void traceDiscoveredServices() {
         final List<BluetoothGattService> services = mBluetoothGatt.getServices();
 
         for (BluetoothGattService service : services) {
 
-        }
+            final List<BluetoothGattCharacteristic> characteristics = service.getCharacteristics();
+            final String servUUID = service.getUuid().toString();
 
-        Log.d("BEST_DEVICE", "Trying to create a new connection.");
+            Log.d("SERVICE", "+++++++++++++++++++++++++++++");
+            Log.d("SERVICE_UUID", servUUID);
+
+            for (BluetoothGattCharacteristic characteristic : characteristics) {
+
+                final String charUUID = characteristic.getUuid().toString();
+
+                //0x2A25
+                Log.d("CHARACTERISTIC_UUID", charUUID);
+            }
+            Log.d("SERVICE", "-----------------------------");
+        }
     }
 
 
@@ -171,11 +188,9 @@ public class MainActivity extends AppCompatActivity {
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            String intentAction;
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 Log.d("GATT_CONNECTION", "Connected to GATT server.");
-                gatt.discoverServices();
-
+                mBluetoothGatt.discoverServices();
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 Log.d("GATT_DISCONNECTION", "Disconnected from GATT server.");
             }
@@ -185,6 +200,7 @@ public class MainActivity extends AppCompatActivity {
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.d("GATT_DISCOVERY", "onServicesDiscovered: " + status);
+                traceDiscoveredServices();
             }
         }
 
@@ -195,6 +211,4 @@ public class MainActivity extends AppCompatActivity {
             super.onCharacteristicRead(gatt, characteristic, status);
         }
     };
-
-
 }
