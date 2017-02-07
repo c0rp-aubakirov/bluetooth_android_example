@@ -11,10 +11,10 @@ public class BluePayDevice implements Comparable {
     private String name;
     private String uniqueCode;
     private String MACaddress;
-    private Short rssi;
+    private Integer rssi;
     private BluetoothDevice device;
 
-    public BluePayDevice(String name, String uniqueCode, String MACaddress, Short rssi,
+    public BluePayDevice(String name, String uniqueCode, String MACaddress, Integer rssi,
                          BluetoothDevice device) {
         this.name = name;
         this.uniqueCode = uniqueCode;
@@ -58,6 +58,7 @@ public class BluePayDevice implements Comparable {
         return name;
     }
 
+
     public void setName(String name) {
         this.name = name;
     }
@@ -70,11 +71,11 @@ public class BluePayDevice implements Comparable {
         this.MACaddress = MACaddress;
     }
 
-    public Short getRssi() {
+    public Integer getRssi() {
         return rssi;
     }
 
-    public void setRssi(Short rssi) {
+    public void setRssi(Integer rssi) {
         this.rssi = rssi;
     }
 }

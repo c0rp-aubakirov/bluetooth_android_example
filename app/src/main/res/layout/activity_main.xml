@@ -10,38 +10,6 @@
                 android:paddingTop="@dimen/activity_vertical_margin"
                 tools:context=".MainActivity">
 
-    <CheckBox
-        android:text="Bluetooth support"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/Bluetooth_supported_CheckBox"
-        android:focusable="false"
-        android:clickable="false"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true"
-        android:textSize="10sp" />
-
-    <CheckBox
-        android:text="Bluetooth low energy support"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/Bluetooth_low_energy_supported_CheckBox"
-        android:focusable="false"
-        android:clickable="false"
-        android:textSize="10sp"
-        android:layout_alignParentTop="true"
-        android:layout_toEndOf="@+id/Bluetooth_supported_CheckBox" />
-
-    <RadioButton
-        android:text="Bluetooth on/off"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/Bluetooth_enable_RadioButton"
-        android:focusable="false"
-        android:clickable="false"
-        android:layout_below="@+id/Bluetooth_supported_CheckBox"
-        android:layout_alignParentStart="true" />
-
     <Switch
         android:text="Start scan  "
         android:layout_width="wrap_content"
@@ -50,17 +18,6 @@
         android:textSize="14sp"
         android:textOn="Start scan  "
         android:textOff="Stop scan  "
-        android:layout_alignBaseline="@+id/Bluetooth_enable_RadioButton"
-        android:layout_alignBottom="@+id/Bluetooth_enable_RadioButton"
         android:layout_alignParentEnd="true" />
-
-    <ListView
-        android:id="@+id/Devices_List"
-        android:layout_height="wrap_content"
-        android:layout_width="match_parent"
-        android:layout_below="@+id/Bluetooth_enable_RadioButton"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_marginTop="15dp" />
 
 </RelativeLayout>
