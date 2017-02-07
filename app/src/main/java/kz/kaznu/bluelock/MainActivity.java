@@ -177,6 +177,10 @@ public class MainActivity extends AppCompatActivity {
 
                 //0x2A25
                 Log.d("CHARACTERISTIC_UUID", charUUID);
+
+                if (charUUID.startsWith("00002a25")) {
+                    mBluetoothGatt.readCharacteristic(characteristic);
+                }
             }
             Log.d("SERVICE", "-----------------------------");
         }
@@ -208,7 +212,16 @@ public class MainActivity extends AppCompatActivity {
         public void onCharacteristicRead(BluetoothGatt gatt,
                                          BluetoothGattCharacteristic characteristic,
                                          int status) {
+            if (characteristic.getUuid().toString().startsWith("00002a25")) {
+                Log.d("INFO_SERIAL_NUMBER", new String(characteristic.getValue()));
+            }
             super.onCharacteristicRead(gatt, characteristic, status);
+        }
+
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt,
+                                          BluetoothGattCharacteristic characteristic, int status) {
+            super.onCharacteristicWrite(gatt, characteristic, status);
         }
     };
 }
