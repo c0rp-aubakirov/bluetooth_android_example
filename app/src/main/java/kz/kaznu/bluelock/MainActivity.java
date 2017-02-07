@@ -214,6 +214,10 @@ public class MainActivity extends AppCompatActivity {
                                          int status) {
             if (characteristic.getUuid().toString().startsWith("00002a25")) {
                 Log.d("INFO_SERIAL_NUMBER", new String(characteristic.getValue()));
+
+                characteristic.setValue("PREVED!");
+                mBluetoothGatt.writeCharacteristic(characteristic);
+
             }
             super.onCharacteristicRead(gatt, characteristic, status);
         }
@@ -221,6 +225,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt,
                                           BluetoothGattCharacteristic characteristic, int status) {
+            Log.d("CHAR_WRITE_CALLBACK", new String(characteristic.getValue()));
             super.onCharacteristicWrite(gatt, characteristic, status);
         }
     };
