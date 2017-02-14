@@ -34,6 +34,27 @@ public class BluePayDevice implements Comparable {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        BluePayDevice that = (BluePayDevice) o;
+
+        if (!name.equals(that.name)) return false;
+        if (!uniqueCode.equals(that.uniqueCode)) return false;
+        return MACaddress.equals(that.MACaddress);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name.hashCode();
+        result = 31 * result + uniqueCode.hashCode();
+        result = 31 * result + MACaddress.hashCode();
+        return result;
+    }
+
+    @Override
     public String toString() {
         return name + "_" + uniqueCode + "_" + rssi;
     }

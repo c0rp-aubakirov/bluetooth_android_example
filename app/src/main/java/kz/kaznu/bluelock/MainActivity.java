@@ -11,13 +11,17 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.widget.CompoundButton;
+import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -25,12 +29,11 @@ public class MainActivity extends AppCompatActivity {
     private static final long SCAN_PERIOD = 10 * 1000;
 
     private Switch bluePay_scan_Switch;
+    private ProgressBar progressBar;
 
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothGatt mBluetoothGatt;
     private BluetoothAdapter.LeScanCallback mLeScanCallback;
-
-    private List<BluePayDevice> devices = new ArrayList<>();
 
     private Handler mHandler;
 
@@ -43,12 +46,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mHandler = new Handler();
-
         // bluetooth shit
         initBluetoothStaff();
 
         // activity element configs
         configureActivityElements();
+
+        Set<BluePayDevice> devices = Utils.loadDevicesToDB(getApplicationContext());
+        System.out.println(devices);
     }
 
     // Init of bluetooth shit
@@ -65,7 +70,9 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("ACTION_FOUND", "=================================\n");
 
 
-                if (device.getName().toLowerCase().startsWith("bluepay")) {
+                if (device.getName() == null) return;
+
+                if (device.getName().toLowerCase().startsWith("preved")) {
 
                     final String[] complexName = device.getName().split("_");
                     final String name = complexName[0];
@@ -81,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
                     final BluePayDevice bluePayDevice =
                             new BluePayDevice(name, uniqueCode, device.getAddress(), blerssi,
                                     device);
-                    devices.add(bluePayDevice);
+                    Utils.addOneDeviceToDB(getApplicationContext(), bluePayDevice);
 
                 }
             }
@@ -92,6 +99,9 @@ public class MainActivity extends AppCompatActivity {
      * Здесь прописаны настройки элементов на экране activity_main
      */
     private void configureActivityElements() {
+
+        progressBar = (ProgressBar) findViewById(R.id.progress_bar);
+
         //Prepare interface objects
         bluePay_scan_Switch = (Switch) findViewById(R.id.bluePay_scan_Switch);
 
@@ -104,14 +114,19 @@ public class MainActivity extends AppCompatActivity {
 
                             if (!mScanning && !mBluetoothAdapter.isDiscovering()) {
                                 Log.d("SWITCH_ON", "Check true");
-                                Toast.makeText(MainActivity.this, "Start scanning", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(MainActivity.this, "Start scanning",
+                                        Toast.LENGTH_SHORT).show();
+//                                devices.clear();
                                 startScanLeDevice();
+                                progressBar.setVisibility(View.VISIBLE);
                             }
 
                         } else {
                             Log.d("MAIN", "Check false");
-                            Toast.makeText(MainActivity.this, "Start connection", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MainActivity.this, "Start connection",
+                                    Toast.LENGTH_SHORT).show();
                             doConnectToClosestDevice();
+                            progressBar.setVisibility(View.INVISIBLE);
                         }
                     }
                 });
@@ -137,19 +152,22 @@ public class MainActivity extends AppCompatActivity {
         mScanning = false;
         mBluetoothAdapter.stopLeScan(mLeScanCallback);
         bluePay_scan_Switch.setChecked(false);
+        progressBar.setVisibility(View.INVISIBLE);
     }
 
     private void doConnectToClosestDevice() {
 
+        final Set<BluePayDevice> devices = Utils.loadDevicesToDB(getApplicationContext());
         if (devices.isEmpty()) {
             Log.d("ACTION_FINISHED", "Device list is empty!");
             Toast.makeText(this, "DEVICES NOT FOUND", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Collections.sort(devices);
+        final ArrayList<BluePayDevice> listOfAllDevices = new ArrayList<>(devices);
+        Collections.sort(listOfAllDevices);
 
-        final BluePayDevice bestConnectionCandidate = devices.get(0);
+        final BluePayDevice bestConnectionCandidate = listOfAllDevices.get(0);
         final BluetoothDevice best_device = bestConnectionCandidate.getDevice();
         Log.d("BEST_DEVICE", best_device.getName());
         Log.d("BEST_DEVICE_RSSI", String.valueOf(bestConnectionCandidate.getRssi()));
@@ -158,6 +176,7 @@ public class MainActivity extends AppCompatActivity {
                 mBluetoothAdapter.getRemoteDevice(best_device.getAddress());
 
         mBluetoothGatt = device.connectGatt(getApplication(), true, mGattCallback);
+        Log.d("BEST_DEVICE", "\n\tConnected to GATT server\n");
     }
 
     private void traceDiscoveredServices() {
@@ -178,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
                 //0x2A25
                 Log.d("CHARACTERISTIC_UUID", charUUID);
 
-                if (charUUID.startsWith("00002a25")) {
+                if (charUUID.startsWith("00002a00")) {
                     mBluetoothGatt.readCharacteristic(characteristic);
                 }
             }
@@ -212,10 +231,11 @@ public class MainActivity extends AppCompatActivity {
         public void onCharacteristicRead(BluetoothGatt gatt,
                                          BluetoothGattCharacteristic characteristic,
                                          int status) {
-            if (characteristic.getUuid().toString().startsWith("00002a25")) {
+            if (characteristic.getUuid().toString().startsWith("00002a00")) {
                 Log.d("INFO_SERIAL_NUMBER", new String(characteristic.getValue()));
 
-                characteristic.setValue("PREVED!");
+                characteristic.setValue("PREVED MEDVED!");
+                mBluetoothGatt.beginReliableWrite();
                 mBluetoothGatt.writeCharacteristic(characteristic);
 
             }
@@ -223,9 +243,20 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt,
+                                            BluetoothGattCharacteristic characteristic) {
+            super.onCharacteristicChanged(gatt, characteristic);
+        }
+
+        @Override
         public void onCharacteristicWrite(BluetoothGatt gatt,
                                           BluetoothGattCharacteristic characteristic, int status) {
             Log.d("CHAR_WRITE_CALLBACK", new String(characteristic.getValue()));
+
+            if (characteristic.getUuid().toString().startsWith("00002a00")) {
+                Log.d("INFO_SERIAL_NUMBER", new String(characteristic.getValue()));
+                mBluetoothGatt.executeReliableWrite();
+            }
             super.onCharacteristicWrite(gatt, characteristic, status);
         }
     };
