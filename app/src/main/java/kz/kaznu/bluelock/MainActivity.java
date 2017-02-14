@@ -10,10 +10,11 @@ import android.bluetooth.BluetoothProfile;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
-import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.Toast;
@@ -30,6 +31,9 @@ public class MainActivity extends AppCompatActivity {
 
     private Switch bluePay_scan_Switch;
     private ProgressBar progressBar;
+    private RecyclerView recyclerView;
+    private BlueAdapter adapter;
+    private List<BluePayDevice> devices;
 
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothGatt mBluetoothGatt;
@@ -88,8 +92,9 @@ public class MainActivity extends AppCompatActivity {
                     final BluePayDevice bluePayDevice =
                             new BluePayDevice(name, uniqueCode, device.getAddress(), blerssi,
                                     device);
-                    Utils.addOneDeviceToDB(getApplicationContext(), bluePayDevice);
-
+                    devices.clear();
+                    devices.addAll(Utils.addOneDeviceToDB(getApplicationContext(), bluePayDevice));
+                    adapter.notifyDataSetChanged();
                 }
             }
         };
@@ -99,6 +104,12 @@ public class MainActivity extends AppCompatActivity {
      * Здесь прописаны настройки элементов на экране activity_main
      */
     private void configureActivityElements() {
+        devices = new ArrayList<>(Utils.loadDevicesToDB(getApplicationContext()));
+
+        adapter = new BlueAdapter(getApplicationContext(), devices);
+        recyclerView = (RecyclerView) findViewById(R.id.scanned_devices);
+        recyclerView.setAdapter(adapter);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
 
         progressBar = (ProgressBar) findViewById(R.id.progress_bar);
 

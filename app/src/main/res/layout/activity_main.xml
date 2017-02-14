@@ -32,11 +32,19 @@
         android:textOn="@string/scanning"
         android:textSize="16sp"/>
 
+    <android.support.v7.widget.RecyclerView
+        android:layout_below="@id/bluePay_scan_Switch"
+        android:id="@+id/scanned_devices"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+    </android.support.v7.widget.RecyclerView>
+
     <LinearLayout
+        android:id="@+id/isPhoneNumber"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_below="@id/bluePay_scan_Switch"
+        android:layout_below="@id/scanned_devices"
         android:gravity="bottom"
         android:orientation="vertical">
 
