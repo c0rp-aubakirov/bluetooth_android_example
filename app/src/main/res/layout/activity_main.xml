@@ -61,6 +61,7 @@
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:inputType="phone"
+                android:text="77772200051"
                 android:maxLength="16"/>
         </android.support.design.widget.TextInputLayout>
 
