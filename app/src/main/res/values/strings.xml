@@ -2,4 +2,5 @@
     <string name="app_name">BluePay</string>
     <string name="start_scan">Поиск</string>
     <string name="scanning">Поиск идёт</string>
+    <string name="wait_scanning">Ждем сканирования</string>
 </resources>

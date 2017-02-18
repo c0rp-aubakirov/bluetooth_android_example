@@ -61,4 +61,8 @@ public class Utils {
 
         return saveDevicesToDB(context, devices);
     }
+
+    public static void clearDB(final Context context) {
+        context.getSharedPreferences(Constants.BLUE_LOCK, Context.MODE_PRIVATE).edit().clear().apply();
+    }
 }

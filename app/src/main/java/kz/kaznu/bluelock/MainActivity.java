@@ -28,7 +28,6 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -75,8 +74,22 @@ public class MainActivity extends AppCompatActivity {
 
         // activity element configs
         configureActivityElements();
-        Utils.saveDevicesToDB(getApplicationContext(), new HashSet<BluePayDevice>());
     }
+
+    public void clear(View view) {
+        if (mBluetoothGatt != null && currentConnectedDevice != null) {
+            mBluetoothGatt.disconnect();
+        }
+
+        Utils.clearDB(getApplicationContext());
+
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+        }
+
+        textView.setText(getString(R.string.wait_scanning));
+    }
+
 
     private void configureLooper() {
         mHandler = new Handler(Looper.getMainLooper()) {
@@ -91,6 +104,11 @@ public class MainActivity extends AppCompatActivity {
 
                 if (message.what == DISCOVER_FINISHED) {
                     progressBar.setVisibility(View.INVISIBLE);
+                    sendMessageLayout.setVisibility(View.VISIBLE);
+                }
+
+                if (message.what == STATE_DISCONNECTED) {
+                    sendMessageLayout.setVisibility(View.INVISIBLE);
                 }
             }
         };
@@ -148,17 +166,6 @@ public class MainActivity extends AppCompatActivity {
         phone = (EditText) findViewById(R.id.phone);
 
         submitButton = (Button) findViewById(R.id.submitButton);
-        submitButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                progressBar.setVisibility(View.VISIBLE);
-                final String value = phone.getText().toString();
-                Log.d("START_WRITE", value);
-
-                writeChar.setValue(value);
-                mBluetoothGatt.writeCharacteristic(writeChar);
-            }
-        });
 
         devices = new ArrayList<>(Utils.loadDevicesToDB(getApplicationContext()));
 
@@ -191,6 +198,19 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 });
+
+        submitButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                progressBar.setVisibility(View.VISIBLE);
+
+                final String value = phone.getText().toString();
+                Log.d("START_WRITE", value);
+
+                writeChar.setValue(value);
+                mBluetoothGatt.writeCharacteristic(writeChar);
+            }
+        });
     }
 
     // Run scanning and post delayed stop

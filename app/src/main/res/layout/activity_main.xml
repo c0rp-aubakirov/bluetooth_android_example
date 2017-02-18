@@ -25,60 +25,71 @@
         android:id="@+id/bluePay_scan_Switch"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
         android:layout_below="@id/progress_bar"
-        android:layout_centerHorizontal="true"
         android:text="@string/start_scan"
         android:textOff="@string/start_scan"
         android:textOn="@string/scanning"
         android:textSize="16sp"/>
 
+    <Button
+        android:id="@+id/clearButton"
+        style="@style/Base.Widget.AppCompat.Button.Borderless.Colored"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_below="@id/progress_bar"
+        android:onClick="clear"
+        android:text="Чистка"
+        android:textSize="16sp"/>
+
     <LinearLayout
         android:id="@+id/header"
-        android:layout_below="@id/bluePay_scan_Switch"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_horizontal">
+        android:layout_below="@id/clearButton"
+        android:gravity="center_horizontal"
+        android:orientation="horizontal">
 
         <TextView
-            android:gravity="center"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textSize="16sp"
             android:layout_marginRight="7dp"
-            android:textStyle="bold"
-            android:text="Имя"/>
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Имя"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
 
         <TextView
-            android:gravity="center"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textSize="16sp"
-            android:textStyle="bold"
             android:layout_marginRight="7dp"
-            android:text="Расстояние"/>
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Расстояние"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
     </LinearLayout>
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/scanned_devices"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/border"
-        android:layout_below="@id/header">
+        android:layout_below="@id/header"
+        android:background="@drawable/border">
     </android.support.v7.widget.RecyclerView>
 
     <TextView
         android:id="@+id/answer_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textStyle="bold"
+        android:layout_below="@id/scanned_devices"
+        android:text="@string/wait_scanning"
         android:textAlignment="center"
         android:textColor="@color/colorAccent"
-        android:text="Готово"
-        android:layout_below="@id/scanned_devices"/>
+        android:textSize="16sp"
+        android:textStyle="bold"/>
 
     <LinearLayout
         android:id="@+id/send_message"
@@ -87,7 +98,25 @@
         android:layout_alignParentBottom="true"
         android:layout_below="@id/answer_view"
         android:gravity="bottom"
+        android:visibility="invisible"
         android:orientation="vertical">
+
+        <android.support.design.widget.TextInputLayout
+            android:id="@+id/input_layout_amoun"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="30dp"
+            android:layout_marginStart="30dp"
+            android:hint="Сумма перевода">
+
+            <android.support.design.widget.TextInputEditText
+                android:id="@+id/amount"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal"
+                android:maxLength="6"
+                android:text="7"/>
+        </android.support.design.widget.TextInputLayout>
 
         <android.support.design.widget.TextInputLayout
             android:id="@+id/input_layout_phone_number"
