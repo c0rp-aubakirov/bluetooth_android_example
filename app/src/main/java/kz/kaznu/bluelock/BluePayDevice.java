@@ -1,12 +1,14 @@
 package kz.kaznu.bluelock;
 
 import android.bluetooth.BluetoothDevice;
+import android.os.Parcel;
+import android.os.Parcelable;
 
 /**
  * Created by c0rp on 1/29/17.
  */
 
-public class BluePayDevice implements Comparable {
+public class BluePayDevice implements Comparable, Parcelable {
 
     private String name;
     private String uniqueCode;
@@ -22,6 +24,26 @@ public class BluePayDevice implements Comparable {
         this.rssi = rssi;
         this.device = device;
     }
+
+    protected BluePayDevice(Parcel in) {
+        name = in.readString();
+        uniqueCode = in.readString();
+        MACaddress = in.readString();
+        rssi = in.readInt();
+        device = in.readParcelable(BluetoothDevice.class.getClassLoader());
+    }
+
+    public static final Creator<BluePayDevice> CREATOR = new Creator<BluePayDevice>() {
+        @Override
+        public BluePayDevice createFromParcel(Parcel in) {
+            return new BluePayDevice(in);
+        }
+
+        @Override
+        public BluePayDevice[] newArray(int size) {
+            return new BluePayDevice[size];
+        }
+    };
 
     @Override
     public int compareTo(Object o) {
@@ -98,5 +120,19 @@ public class BluePayDevice implements Comparable {
 
     public void setRssi(Integer rssi) {
         this.rssi = rssi;
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(name);
+        dest.writeString(uniqueCode);
+        dest.writeString(MACaddress);
+        dest.writeInt(rssi);
+        dest.writeParcelable(device, flags);
     }
 }

@@ -329,11 +329,8 @@ public class MainActivity extends AppCompatActivity {
             Log.d("START_READ", msg);
 
             if (characteristic.getUuid().toString().startsWith(Constants.TO_READ)) {
-                Log.d("START_READ", msg);
-                // And this is how you call it from the worker thread:
                 mHandler.obtainMessage(ANSWER_FROM_SERVER,
                         "Получен ответ от сервера allpay: \n" + msg).sendToTarget();
-
             }
             super.onCharacteristicRead(gatt, characteristic, status);
         }
