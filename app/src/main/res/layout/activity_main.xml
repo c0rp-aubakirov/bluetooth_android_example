@@ -32,19 +32,60 @@
         android:textOn="@string/scanning"
         android:textSize="16sp"/>
 
-    <android.support.v7.widget.RecyclerView
+    <LinearLayout
+        android:id="@+id/header"
         android:layout_below="@id/bluePay_scan_Switch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_horizontal">
+
+        <TextView
+            android:gravity="center"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="16sp"
+            android:layout_marginRight="7dp"
+            android:textStyle="bold"
+            android:text="Имя"/>
+
+        <TextView
+            android:gravity="center"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginRight="7dp"
+            android:text="Расстояние"/>
+    </LinearLayout>
+
+    <android.support.v7.widget.RecyclerView
         android:id="@+id/scanned_devices"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@drawable/border"
+        android:layout_below="@id/header">
     </android.support.v7.widget.RecyclerView>
 
+    <TextView
+        android:id="@+id/answer_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textAlignment="center"
+        android:textColor="@color/colorAccent"
+        android:text="Готово"
+        android:layout_below="@id/scanned_devices"/>
+
     <LinearLayout
-        android:id="@+id/isPhoneNumber"
+        android:id="@+id/send_message"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_below="@id/scanned_devices"
+        android:layout_below="@id/answer_view"
         android:gravity="bottom"
         android:orientation="vertical">
 
@@ -56,12 +97,13 @@
             android:layout_marginStart="30dp"
             android:hint="Номер телефона">
 
-            <EditText
+            <android.support.design.widget.TextInputEditText
                 android:id="@+id/phone"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:inputType="phone"
-                android:maxLength="16"/>
+                android:maxLength="16"
+                android:text="77772200051"/>
         </android.support.design.widget.TextInputLayout>
 
         <Button
