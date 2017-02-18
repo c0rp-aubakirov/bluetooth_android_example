@@ -37,7 +37,9 @@ public class MainActivity extends AppCompatActivity {
 
     private static final long SCAN_PERIOD = 3 * 1000;
     public static final int ANSWER_FROM_SERVER = 1;
+    private static final int DISCOVER_STARTED = 2;
     public static final int DISCOVER_FINISHED = 3;
+    private static final int STATE_DISCONNECTED = 4;
 
     private Switch bluePay_scan_Switch;
     private ProgressBar progressBar;
@@ -52,21 +54,14 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothGatt mBluetoothGatt;
     private BluetoothAdapter.LeScanCallback mLeScanCallback;
-    private BluetoothDevice device = null;
+    private BluetoothDevice currentConnectedDevice = null;
 
     private Handler mHandler;
 
     private Boolean mScanning = false;
 
-    private static final String TO_WRITE = "00003a51";
     private BluetoothGattCharacteristic writeChar;
-    private static final String TO_READ = "00003a52";
     private BluetoothGattCharacteristic readChar;
-
-    private static final String SERVICE = "0000183a";
-
-    private static final String SERVICE_GAP = "00001800";
-    private static final String DEVICE_NAME_CHARACTERISTIC = "00002a00";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -226,7 +221,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (devices.isEmpty()) {
             Log.d("ACTION_FINISHED", "Device list is empty!");
-            Toast.makeText(this, "DEVICES NOT FOUND", Toast.LENGTH_SHORT).show();
             textView.setText("Устройства BluePay не найдены");
             progressBar.setVisibility(View.INVISIBLE);
             return;
@@ -240,11 +234,10 @@ public class MainActivity extends AppCompatActivity {
         Log.d("BEST_DEVICE", bestDevice.getName());
         Log.d("BEST_DEVICE_RSSI", String.valueOf(bestConnectionCandidate.getRssi()));
 
-        device = mBluetoothAdapter.getRemoteDevice(bestDevice.getAddress());
+        currentConnectedDevice = mBluetoothAdapter.getRemoteDevice(bestDevice.getAddress());
 
-        mBluetoothGatt = device.connectGatt(getApplication(), true, mGattCallback);
+        mBluetoothGatt = currentConnectedDevice.connectGatt(getApplication(), true, mGattCallback);
 
-        Log.d("BEST_DEVICE", "\n\tConnected to GATT server\n");
         textView.setText("Подключаемся к устройству " + bestDevice.getName());
     }
 
@@ -256,18 +249,18 @@ public class MainActivity extends AppCompatActivity {
             final List<BluetoothGattCharacteristic> characteristics = service.getCharacteristics();
             final String servUUID = service.getUuid().toString();
 
-            if (servUUID.startsWith(SERVICE)) {
+            if (servUUID.startsWith(Constants.SERVICE)) {
 
                 for (BluetoothGattCharacteristic characteristic : characteristics) {
 
                     final String charUUID = characteristic.getUuid().toString();
 
-                    if (charUUID.startsWith(TO_WRITE)) {
+                    if (charUUID.startsWith(Constants.TO_WRITE)) {
                         Log.d("DISCOVER", "Write characteristic detected: " + charUUID);
                         writeChar = characteristic;
                     }
 
-                    if (charUUID.startsWith(TO_READ)) {
+                    if (charUUID.startsWith(Constants.TO_READ)) {
                         Log.d("DISCOVER", "Read characteristic detected: " + charUUID);
                         readChar = characteristic;
                     }
@@ -275,13 +268,13 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            if (servUUID.startsWith(SERVICE_GAP)) {
+            if (servUUID.startsWith(Constants.SERVICE_GAP)) {
 
                 for (BluetoothGattCharacteristic characteristic : characteristics) {
 
                     final String charUUID = characteristic.getUuid().toString();
 
-                    if (charUUID.startsWith(DEVICE_NAME_CHARACTERISTIC)) {
+                    if (charUUID.startsWith(Constants.DEVICE_NAME_CHARACTERISTIC)) {
                         mBluetoothGatt.readCharacteristic(characteristic);
                     }
                 }
@@ -300,15 +293,21 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            if (newState == BluetoothProfile.STATE_CONNECTED) {
-                Log.d("GATT_CONNECTION", "Connected to GATT server.");
+            switch (newState) {
+                case BluetoothProfile.STATE_CONNECTED:
+                    Log.d("CON_ST_CHAN", "Connected to GATT server");
 
-                if (device != null && gatt.getDevice().equals(device)) {
-                    Log.d("GATT_DISCOVERY", "STARTED");
-                    mBluetoothGatt.discoverServices();
-                }
-            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                Log.d("GATT_DISCONNECTION", "Disconnected from GATT server.");
+                    if (currentConnectedDevice != null && gatt.getDevice().equals(
+                            currentConnectedDevice)) {
+                        Log.d("CON_ST_CHAN", "Discovery started");
+                        mBluetoothGatt.discoverServices();
+                        mHandler.obtainMessage(DISCOVER_STARTED, "Начинаем настройку").sendToTarget();
+                    }
+                    break;
+                case BluetoothProfile.STATE_DISCONNECTED:
+                    Log.d("CON_ST_CHAN", "Disconnected from GATT server.");
+                    mHandler.obtainMessage(STATE_DISCONNECTED, "Отключен от устройства. Запустите сканирование еще раз").sendToTarget();
+                    break;
             }
         }
 
@@ -318,8 +317,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 traceDiscoveredServices();
-                Message message = mHandler.obtainMessage(DISCOVER_FINISHED, "Настройка закочена. Можно начинать сообщение между устройствами");
-                message.sendToTarget();
+                mHandler.obtainMessage(DISCOVER_FINISHED, "Настройка закочена. Можно начинать сообщение между устройствами").sendToTarget();
             }
         }
 
@@ -330,12 +328,11 @@ public class MainActivity extends AppCompatActivity {
             final String msg = new String(characteristic.getValue());
             Log.d("START_READ", msg);
 
-            if (characteristic.getUuid().toString().startsWith(TO_READ)) {
+            if (characteristic.getUuid().toString().startsWith(Constants.TO_READ)) {
                 Log.d("START_READ", msg);
                 // And this is how you call it from the worker thread:
-                Message message = mHandler.obtainMessage(ANSWER_FROM_SERVER,
-                        "Получен ответ от сервера allpay: \n" + msg);
-                message.sendToTarget();
+                mHandler.obtainMessage(ANSWER_FROM_SERVER,
+                        "Получен ответ от сервера allpay: \n" + msg).sendToTarget();
 
             }
             super.onCharacteristicRead(gatt, characteristic, status);
@@ -352,12 +349,11 @@ public class MainActivity extends AppCompatActivity {
         public void onCharacteristicWrite(BluetoothGatt gatt,
                                           BluetoothGattCharacteristic characteristic, int status) {
 
-            if (characteristic.getUuid().toString().startsWith(TO_WRITE)) {
+            if (characteristic.getUuid().toString().startsWith(Constants.TO_WRITE)) {
                 final String msg = new String(characteristic.getValue());
                 Log.d("FINISH_WRITE", msg);
 
-                Message message = mHandler.obtainMessage(0, "Сообщение отправлено. Ждем ответа\n\t" + msg);
-                message.sendToTarget();
+                mHandler.obtainMessage(0, "Сообщение отправлено. Ждем ответа\n\t" + msg).sendToTarget();
 
                 runOneShotTask(readChar);
             }
