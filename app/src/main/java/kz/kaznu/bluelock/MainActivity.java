@@ -15,6 +15,7 @@ import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.telephony.PhoneNumberFormattingTextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -47,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private List<BluePayDevice> devices;
     private Button submitButton;
     private EditText phone;
+    private EditText amount;
     private TextView textView;
     private LinearLayout sendMessageLayout;
 
@@ -83,11 +85,16 @@ public class MainActivity extends AppCompatActivity {
 
         Utils.clearDB(getApplicationContext());
 
+        if (devices != null) {
+            devices.clear();
+        }
+
         if (adapter != null) {
             adapter.notifyDataSetChanged();
         }
 
         textView.setText(getString(R.string.wait_scanning));
+        progressBar.setVisibility(View.INVISIBLE);
     }
 
 
@@ -164,6 +171,7 @@ public class MainActivity extends AppCompatActivity {
         textView = (TextView) findViewById(R.id.answer_view);
 
         phone = (EditText) findViewById(R.id.phone);
+        amount = (EditText) findViewById(R.id.amount);
 
         submitButton = (Button) findViewById(R.id.submitButton);
 
@@ -204,10 +212,12 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 progressBar.setVisibility(View.VISIBLE);
 
-                final String value = phone.getText().toString();
-                Log.d("START_WRITE", value);
+                final String amountValue = amount.getText().toString();
+                final String phoneValue = phone.getText().toString();
+                final String request = "{\"lang\": \"EN\",\"amount\": \"" + amountValue + "\",\"toLoginName\":\"" +phoneValue+"\"}";
 
-                writeChar.setValue(value);
+                Log.d("START_WRITE", request);
+                writeChar.setValue(request);
                 mBluetoothGatt.writeCharacteristic(writeChar);
             }
         });
