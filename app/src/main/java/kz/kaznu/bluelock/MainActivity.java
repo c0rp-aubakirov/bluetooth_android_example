@@ -7,9 +7,11 @@ import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.annotation.NonNull;
+import android.os.Looper;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -18,8 +20,10 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -27,16 +31,13 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 
 public class MainActivity extends AppCompatActivity {
 
     private static final long SCAN_PERIOD = 3 * 1000;
+    public static final int ANSWER_FROM_SERVER = 1;
+    public static final int DISCOVER_FINISHED = 3;
 
     private Switch bluePay_scan_Switch;
     private ProgressBar progressBar;
@@ -45,6 +46,8 @@ public class MainActivity extends AppCompatActivity {
     private List<BluePayDevice> devices;
     private Button submitButton;
     private EditText phone;
+    private TextView textView;
+    private LinearLayout sendMessageLayout;
 
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothGatt mBluetoothGatt;
@@ -56,23 +59,46 @@ public class MainActivity extends AppCompatActivity {
     private Boolean mScanning = false;
 
     private static final String TO_WRITE = "00003a51";
+    private BluetoothGattCharacteristic writeChar;
     private static final String TO_READ = "00003a52";
-    public static final String SERVICE = "0000183a";
+    private BluetoothGattCharacteristic readChar;
 
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private static final String SERVICE = "0000183a";
+
+    private static final String SERVICE_GAP = "00001800";
+    private static final String DEVICE_NAME_CHARACTERISTIC = "00002a00";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mHandler = new Handler();
+        configureLooper();
+
         // bluetooth shit
         initBluetoothStaff();
 
         // activity element configs
         configureActivityElements();
         Utils.saveDevicesToDB(getApplicationContext(), new HashSet<BluePayDevice>());
+    }
+
+    private void configureLooper() {
+        mHandler = new Handler(Looper.getMainLooper()) {
+            @Override
+            public void handleMessage(Message message) {
+                textView.setText(message.obj.toString());
+                Toast.makeText(MainActivity.this, message.obj.toString(), Toast.LENGTH_SHORT).show();
+
+                if (message.what == ANSWER_FROM_SERVER) {
+                    progressBar.setVisibility(View.INVISIBLE);
+                }
+
+                if (message.what == DISCOVER_FINISHED) {
+                    progressBar.setVisibility(View.INVISIBLE);
+                }
+            }
+        };
     }
 
     // Init of bluetooth shit
@@ -120,41 +146,22 @@ public class MainActivity extends AppCompatActivity {
      */
     private void configureActivityElements() {
 
+        sendMessageLayout = (LinearLayout) findViewById(R.id.send_message);
+
+        textView = (TextView) findViewById(R.id.answer_view);
+
         phone = (EditText) findViewById(R.id.phone);
 
         submitButton = (Button) findViewById(R.id.submitButton);
         submitButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final List<BluetoothGattService> services = mBluetoothGatt.getServices();
-                for (BluetoothGattService service : services) {
+                progressBar.setVisibility(View.VISIBLE);
+                final String value = phone.getText().toString();
+                Log.d("START_WRITE", value);
 
-                    final List<BluetoothGattCharacteristic> characteristics = service.getCharacteristics();
-                    final String servUUID = service.getUuid().toString();
-
-                    if (servUUID.startsWith(SERVICE)) {
-                        Log.d("SERVICE", "+++++++++++++++++++++++++++++");
-                        Log.d("SERVICE_UUID", servUUID);
-
-                        for (BluetoothGattCharacteristic characteristic : characteristics) {
-
-                            final String charUUID = characteristic.getUuid().toString();
-
-                            //0x2A25
-                            Log.d("CHARACTERISTIC_UUID", charUUID);
-
-                            if (charUUID.startsWith(TO_WRITE)) {
-//                                mBluetoothGatt.readCharacteristic(characteristic);
-                                Log.d("START_WRITE", charUUID);
-                                characteristic.setValue(phone.getText().toString());
-                                mBluetoothGatt.beginReliableWrite();
-                                mBluetoothGatt.writeCharacteristic(characteristic);
-                            }
-
-                        }
-                        Log.d("SERVICE", "-----------------------------");
-                    }
-                }
+                writeChar.setValue(value);
+                mBluetoothGatt.writeCharacteristic(writeChar);
             }
         });
 
@@ -179,17 +186,12 @@ public class MainActivity extends AppCompatActivity {
 
                             if (!mScanning && !mBluetoothAdapter.isDiscovering()) {
                                 Log.d("SWITCH_ON", "Check true");
-                                Toast.makeText(MainActivity.this, "Start scanning",
-                                        Toast.LENGTH_SHORT).show();
-//                                devices.clear();
                                 startScanLeDevice();
                                 progressBar.setVisibility(View.VISIBLE);
                             }
 
                         } else {
                             Log.d("MAIN", "Check false");
-                            Toast.makeText(MainActivity.this, "Start connection",
-                                    Toast.LENGTH_SHORT).show();
                             doConnectToClosestDevice();
                         }
                     }
@@ -221,9 +223,11 @@ public class MainActivity extends AppCompatActivity {
     private void doConnectToClosestDevice() {
 
         final Set<BluePayDevice> devices = Utils.loadDevicesToDB(getApplicationContext());
+
         if (devices.isEmpty()) {
             Log.d("ACTION_FINISHED", "Device list is empty!");
             Toast.makeText(this, "DEVICES NOT FOUND", Toast.LENGTH_SHORT).show();
+            textView.setText("Устройства BluePay не найдены");
             progressBar.setVisibility(View.INVISIBLE);
             return;
         }
@@ -239,9 +243,9 @@ public class MainActivity extends AppCompatActivity {
         device = mBluetoothAdapter.getRemoteDevice(bestDevice.getAddress());
 
         mBluetoothGatt = device.connectGatt(getApplication(), true, mGattCallback);
+
         Log.d("BEST_DEVICE", "\n\tConnected to GATT server\n");
-        progressBar.setVisibility(View.INVISIBLE);
-        submitButton.setVisibility(View.VISIBLE);
+        textView.setText("Подключаемся к устройству " + bestDevice.getName());
     }
 
     private void traceDiscoveredServices() {
@@ -252,16 +256,37 @@ public class MainActivity extends AppCompatActivity {
             final List<BluetoothGattCharacteristic> characteristics = service.getCharacteristics();
             final String servUUID = service.getUuid().toString();
 
-            if (servUUID.startsWith("0x183A")) {
-                Log.d("SERVICE", "+++++++++++++++++++++++++++++");
-                Log.d("SERVICE_UUID", servUUID);
+            if (servUUID.startsWith(SERVICE)) {
 
                 for (BluetoothGattCharacteristic characteristic : characteristics) {
+
                     final String charUUID = characteristic.getUuid().toString();
-                    Log.d("CHARACTERISTIC_UUID", charUUID);
+
+                    if (charUUID.startsWith(TO_WRITE)) {
+                        Log.d("DISCOVER", "Write characteristic detected: " + charUUID);
+                        writeChar = characteristic;
+                    }
+
+                    if (charUUID.startsWith(TO_READ)) {
+                        Log.d("DISCOVER", "Read characteristic detected: " + charUUID);
+                        readChar = characteristic;
+                    }
+
                 }
-                Log.d("SERVICE", "-----------------------------");
             }
+
+            if (servUUID.startsWith(SERVICE_GAP)) {
+
+                for (BluetoothGattCharacteristic characteristic : characteristics) {
+
+                    final String charUUID = characteristic.getUuid().toString();
+
+                    if (charUUID.startsWith(DEVICE_NAME_CHARACTERISTIC)) {
+                        mBluetoothGatt.readCharacteristic(characteristic);
+                    }
+                }
+            }
+
         }
     }
 
@@ -292,7 +317,9 @@ public class MainActivity extends AppCompatActivity {
             Log.d("GATT_DISCOVERY", "FINISHED " + status);
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
-//                traceDiscoveredServices();
+                traceDiscoveredServices();
+                Message message = mHandler.obtainMessage(DISCOVER_FINISHED, "Настройка закочена. Можно начинать сообщение между устройствами");
+                message.sendToTarget();
             }
         }
 
@@ -301,12 +328,14 @@ public class MainActivity extends AppCompatActivity {
                                          BluetoothGattCharacteristic characteristic,
                                          int status) {
             final String msg = new String(characteristic.getValue());
+            Log.d("START_READ", msg);
 
-           Log.d("START_READ", msg);
             if (characteristic.getUuid().toString().startsWith(TO_READ)) {
                 Log.d("START_READ", msg);
-
-                Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG).show();
+                // And this is how you call it from the worker thread:
+                Message message = mHandler.obtainMessage(ANSWER_FROM_SERVER,
+                        "Получен ответ от сервера allpay: \n" + msg);
+                message.sendToTarget();
 
             }
             super.onCharacteristicRead(gatt, characteristic, status);
@@ -315,6 +344,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
+            Log.d("CHAR_CHANGED", new String(characteristic.getValue()));
             super.onCharacteristicChanged(gatt, characteristic);
         }
 
@@ -323,33 +353,34 @@ public class MainActivity extends AppCompatActivity {
                                           BluetoothGattCharacteristic characteristic, int status) {
 
             if (characteristic.getUuid().toString().startsWith(TO_WRITE)) {
-                Log.d("FINISH_WRITE", new String(characteristic.getValue()));
-                mBluetoothGatt.executeReliableWrite();
+                final String msg = new String(characteristic.getValue());
+                Log.d("FINISH_WRITE", msg);
 
-                runOneShotTask(characteristic);
+                Message message = mHandler.obtainMessage(0, "Сообщение отправлено. Ждем ответа\n\t" + msg);
+                message.sendToTarget();
 
+                runOneShotTask(readChar);
             }
-
             super.onCharacteristicWrite(gatt, characteristic, status);
         }
     };
 
 
-    public ScheduledFuture<?> runOneShotTask(final BluetoothGattCharacteristic characteristic) {
-
-        final ScheduledFuture<?> future = scheduler.schedule(getCommand(characteristic) , 3, SECONDS );
-
-        return future;
-
-    }
-
-    @NonNull
-    private Runnable getCommand(final BluetoothGattCharacteristic characteristic) {
-        return new Runnable() {
+    public void runOneShotTask(final BluetoothGattCharacteristic characteristic) {
+        Runnable r = new Runnable() {
             @Override
             public void run() {
-                mBluetoothGatt.readCharacteristic(characteristic);
+                new AsyncTask<Void, Void, Void>() {
+                    @Override
+                    protected Void doInBackground(Void... params) {
+                        Log.d("BACKGROUND_TASK", "Started");
+                        mBluetoothGatt.readCharacteristic(characteristic);
+                        return null;
+                    }
+                }.execute();
             }
         };
+        mHandler.postDelayed(r, 3000);
     }
+
 }
