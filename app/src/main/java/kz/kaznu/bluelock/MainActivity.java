@@ -347,7 +347,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 traceDiscoveredServices();
-                mHandler.obtainMessage(DISCOVER_FINISHED, "Настройка закочена. Можно начинать сообщение между устройствами").sendToTarget();
+                mHandler.obtainMessage(DISCOVER_FINISHED, "Настройка закончена. Можно начинать общение между устройствами").sendToTarget();
             }
         }
 
